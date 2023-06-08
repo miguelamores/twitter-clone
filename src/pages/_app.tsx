@@ -17,7 +17,7 @@ const MyApp: AppType<{ session: Session | null }> = ({
         <meta name="description" content="Twiiter Clone" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <div className="container mx-auto flex items-start">
+      <div className="container mx-auto flex items-start sm:pr-4">
         <SideNav />
         <div className="min-h-screen flex-grow border-x">
           <Component {...pageProps} />
