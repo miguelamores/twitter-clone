@@ -4,6 +4,7 @@ import { ProfileImage } from "./ProfileImage";
 import { IconHoverEffect } from "./IconHoverEffect";
 import { useSession } from "next-auth/react";
 import { VscHeartFilled, VscHeart } from "react-icons/vsc";
+import { api } from "~/utils/api";
 
 type Tweet = {
   id: string;
@@ -66,10 +67,49 @@ function TweetCard({
   likedByMe,
   user,
 }: Tweet) {
+  const trpcUtils = api.useContext();
+  const toogleLike = api.tweet.toogleLike.useMutation({
+    onSuccess: ({ addedLike }) => {
+      const updateData: Parameters<
+        typeof trpcUtils.tweet.infiniteFeed.setInfiniteData
+      >[1] = (oldData) => {
+        if (oldData == null) return;
+
+        const countModifier = addedLike ? 1 : -1;
+
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => {
+            return {
+              ...page,
+              tweets: page.tweets.map((tweet) => {
+                if (tweet.id === id) {
+                  return {
+                    ...tweet,
+                    likeCount: tweet.likeCount + countModifier,
+                    likedByMe: addedLike,
+                  };
+                }
+
+                return tweet;
+              }),
+            };
+          }),
+        };
+      };
+
+      trpcUtils.tweet.infiniteFeed.setInfiniteData({}, updateData);
+    },
+  });
+
+  function handleToogleLike() {
+    toogleLike.mutate({ id });
+  }
+
   return (
     <li className="flex gap-4 border-b px-4 py-4">
       <Link href={`/profiles/${user.id}`}>
-        <ProfileImage src={user.image} alt={user.name} />
+        <ProfileImage src={user.image} />
       </Link>
       <div className="flex flex-grow flex-col">
         <div className="flex gap-1">
@@ -85,18 +125,30 @@ function TweetCard({
           </span>
         </div>
         <p className="whitespace-pre-wrap">{content}</p>
-        <HeartButton likedByMe={likedByMe} likeCount={likeCount} />
+        <HeartButton
+          onClick={handleToogleLike}
+          isLoading={toogleLike.isLoading}
+          likedByMe={likedByMe}
+          likeCount={likeCount}
+        />
       </div>
     </li>
   );
 }
 
 type HeartButtonProps = {
+  onClick: () => void;
+  isLoading: boolean;
   likedByMe: boolean;
   likeCount: number;
 };
 
-function HeartButton({ likedByMe, likeCount = 0 }: HeartButtonProps) {
+function HeartButton({
+  isLoading,
+  onClick,
+  likedByMe,
+  likeCount = 0,
+}: HeartButtonProps) {
   const session = useSession();
   const HeartIcon = likedByMe ? VscHeartFilled : VscHeart;
 
@@ -111,6 +163,8 @@ function HeartButton({ likedByMe, likeCount = 0 }: HeartButtonProps) {
 
   return (
     <button
+      disabled={isLoading}
+      onClick={onClick}
       className={`group -ml-2 flex items-center gap-1 self-start transition-colors duration-200 ${
         likedByMe
           ? "text-red-500"
