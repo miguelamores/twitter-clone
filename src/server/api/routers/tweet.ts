@@ -69,7 +69,7 @@ async function getInfiniteTweets({
   limit,
   cursor,
 }: {
-  whereClause: Prisma.TweetWhereInput;
+  whereClause?: Prisma.TweetWhereInput;
   limit: number;
   cursor: { id: string; createdAt: Date } | undefined;
   ctx: inferAsyncReturnType<typeof createTRPCContext>;
